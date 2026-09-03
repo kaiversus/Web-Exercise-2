@@ -7,7 +7,7 @@ import jakarta.persistence.Persistence;
 public class JPAConfig {
 
 	private static final EntityManagerFactory FACTORY =
-			Persistence.createEntityManagerFactory("MyServiceMVC_2");
+			Persistence.createEntityManagerFactory("MyServiceMVC_3");
 
 	public static EntityManager getEntityManager() {
 		return FACTORY.createEntityManager();
