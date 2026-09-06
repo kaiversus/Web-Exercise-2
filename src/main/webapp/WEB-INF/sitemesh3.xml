@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemesh>
-    <mapping path="/*" name="web" decorator="web.jsp"/>
-    <mapping path="/api*" exclude="true"/> 
+    <mapping path="/*" decorator="web.jsp"/>
+    <mapping path="/image" exclude="true"/>
 </sitemesh>

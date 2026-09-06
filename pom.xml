@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   
   <groupId>com.kai.001</groupId>
-  <artifactId>MyServiceMVC_3</artifactId>
+  <artifactId>MyServiceMVC</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>war</packaging>
   
@@ -72,6 +72,20 @@
     <artifactId>sitemesh</artifactId>
     <version>3.3.0-RC1</version>
     <scope>compile</scope>
+</dependency>
+
+<!-- Gửi email -->
+<dependency>
+    <groupId>org.eclipse.angus</groupId>
+    <artifactId>angus-mail</artifactId>
+    <version>2.0.3</version>
+</dependency>
+
+<!-- Hash pass-->
+<dependency>
+    <groupId>at.favre.lib</groupId>
+    <artifactId>bcrypt</artifactId>
+    <version>0.10.2</version>
 </dependency>
 
   </dependencies>

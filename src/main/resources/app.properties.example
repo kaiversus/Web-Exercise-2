@@ -1,0 +1,9 @@
+mail.smtp.host=smtp.gmail.com
+mail.smtp.port=587
+mail.smtp.username=CHANGE_ME
+mail.smtp.password=CHANGE_ME
+mail.from.name=MyServiceMVC
+otp.length=6
+otp.ttl.minutes=5
+otp.max.attempt=5
+upload.dir=D:\\upload

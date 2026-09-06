@@ -44,3 +44,4 @@ desktop.ini
 $RECYCLE.BIN/
 .DS_Store
 
+src/main/resources/app.properties
