@@ -8,6 +8,7 @@
 		<class>com.kai.entity.Category</class>
 		<class>com.kai.entity.User</class>
 		<class>com.kai.entity.Video</class>
+		<class>com.kai.entity.Product</class>
 
 		<properties>
 			<property name="jakarta.persistence.jdbc.driver"
