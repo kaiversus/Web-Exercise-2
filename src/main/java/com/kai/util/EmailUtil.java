@@ -54,7 +54,7 @@ public class EmailUtil {
 
 		msg.setFrom(new InternetAddress(
 				AppConfig.get("mail.smtp.username"),
-				AppConfig.get("mail.from.name", "MyServiceMVC"),
+				AppConfig.get("mail.from.name", "52HZ-platform"),
 				"UTF-8"));
 		msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to, false));
 		msg.setSubject(subject, "UTF-8");
@@ -73,7 +73,7 @@ public class EmailUtil {
 		String html = """
 				<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;
 				            border:1px solid #ddd;border-radius:8px;padding:24px">
-				  <h2 style="color:#2196F3;margin-top:0">MyServiceMVC</h2>
+				  <h2 style="color:#2196F3;margin-top:0">52HZ-platform</h2>
 				  <p>Xin chào <b>%s</b>,</p>
 				  <p>Mã OTP để <b>%s</b> của bạn là:</p>
 				  <p style="font-size:32px;letter-spacing:8px;font-weight:bold;
@@ -88,7 +88,7 @@ public class EmailUtil {
 				</div>
 				""".formatted(name, escapeHtml(purposeText), otp, ttlMinutes);
 
-		send(to, "[MyServiceMVC] Ma OTP cua ban", html);
+		send(to, "[52HZ-platform] Ma OTP cua ban", html);
 	}
 
 	public static void sendPasswordChangedNotice(String to, String fullname)
@@ -99,7 +99,7 @@ public class EmailUtil {
 		String html = """
 				<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;
 				            border:1px solid #ddd;border-radius:8px;padding:24px">
-				  <h2 style="color:#2196F3;margin-top:0">MyServiceMVC</h2>
+				  <h2 style="color:#2196F3;margin-top:0">52HZ-platform</h2>
 				  <p>Xin chào <b>%s</b>,</p>
 				  <p>Mật khẩu tài khoản của bạn vừa được thay đổi thành công.</p>
 				  <p style="color:#c62828">
@@ -109,7 +109,7 @@ public class EmailUtil {
 				</div>
 				""".formatted(name);
 
-		send(to, "[MyServiceMVC] Mat khau cua ban vua duoc thay doi", html);
+		send(to, "[52HZ-platform] Mat khau cua ban vua duoc thay doi", html);
 	}
 
 	private static String escapeHtml(String s) {

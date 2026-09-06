@@ -1,28 +1,76 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page pageEncoding="UTF-8"%>
 <%@ taglib uri="jakarta.tags.core" prefix="c"%>
-<div style="background-color:#2196F3;color:white;padding:15px">
-	<div style="float:left">
-		<b style="font-size:20px">Hệ Thống Quản Lý</b>
-		&nbsp;&nbsp;
-		<a href="<c:url value='/home'/>" style="color:white">Trang chủ</a> |
-		<a href="<c:url value='/product'/>" style="color:white">Sản phẩm</a>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+	<div class="container">
+
+		<a class="navbar-brand fw-bold" href="<c:url value='/home'/>">
+			<i class="bi bi-shop me-1"></i>52HZ-platform
+		</a>
+
+		<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+			data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false"
+			aria-label="Mở menu">
+			<span class="navbar-toggler-icon"></span>
+		</button>
+
+		<div class="collapse navbar-collapse" id="mainNav">
+
+			<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+				<li class="nav-item">
+					<a class="nav-link" href="<c:url value='/home'/>">Trang chủ</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="<c:url value='/product'/>">Sản phẩm</a>
+				</li>
+			</ul>
+
+			<ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+				<c:choose>
+					<c:when test="${not empty sessionScope.account}">
+
+						<c:if test="${sessionScope.account.role == 1}">
+							<li class="nav-item dropdown">
+								<a class="nav-link dropdown-toggle" href="#" role="button"
+									data-bs-toggle="dropdown" aria-expanded="false">
+									<i class="bi bi-gear me-1"></i>Quản trị
+								</a>
+								<ul class="dropdown-menu dropdown-menu-end">
+									<li><a class="dropdown-item" href="<c:url value='/admin/products'/>">Sản phẩm</a></li>
+									<li><a class="dropdown-item" href="<c:url value='/admin/categories'/>">Danh mục</a></li>
+								</ul>
+							</li>
+						</c:if>
+
+						<li class="nav-item dropdown">
+							<a class="nav-link dropdown-toggle" href="#" role="button"
+								data-bs-toggle="dropdown" aria-expanded="false">
+								<i class="bi bi-person-circle me-1"></i>
+								<c:out value="${sessionScope.account.username}"/>
+							</a>
+							<ul class="dropdown-menu dropdown-menu-end">
+								<li><a class="dropdown-item" href="<c:url value='/profile'/>">Trang cá nhân</a></li>
+								<li><hr class="dropdown-divider"></li>
+								<li>
+									<a class="dropdown-item text-danger" href="<c:url value='/logout'/>">
+										<i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
+									</a>
+								</li>
+							</ul>
+						</li>
+
+					</c:when>
+					<c:otherwise>
+						<li class="nav-item">
+							<a class="nav-link" href="<c:url value='/login'/>">Đăng nhập</a>
+						</li>
+						<li class="nav-item">
+							<a class="btn btn-light btn-sm ms-lg-2 mt-2 mt-lg-0"
+								href="<c:url value='/register'/>">Đăng ký</a>
+						</li>
+					</c:otherwise>
+				</c:choose>
+			</ul>
+
+		</div>
 	</div>
-	<div style="float:right">
-		<c:choose>
-			<c:when test="${not empty sessionScope.account}">
-				<c:if test="${sessionScope.account.role == 1}">
-					<a href="<c:url value='/admin/products'/>" style="color:white">Quản trị</a> |
-				</c:if>
-				<a href="<c:url value='/profile'/>" style="color:white">
-					<c:out value="${sessionScope.account.username}"/>
-				</a> |
-				<a href="<c:url value='/logout'/>" style="color:white">Đăng xuất</a>
-			</c:when>
-			<c:otherwise>
-				<a href="<c:url value='/login'/>" style="color:white">Đăng nhập</a> |
-				<a href="<c:url value='/register'/>" style="color:white">Đăng ký</a>
-			</c:otherwise>
-		</c:choose>
-	</div>
-	<div style="clear:both"></div>
-</div>
+</nav>

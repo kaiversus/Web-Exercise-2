@@ -8,20 +8,42 @@
 </head>
 <body>
 
-	<h2>Quên mật khẩu</h2>
-	<p>Nhập email bạn đã dùng để đăng ký. Chúng tôi sẽ gửi mã OTP để đặt lại mật khẩu.</p>
+<div class="row justify-content-center">
+	<div class="col-lg-5 col-md-7">
+		<div class="card shadow-sm border-0">
+			<div class="card-body p-4">
 
-	<c:if test="${not empty error}">
-		<p style="color:red"><c:out value="${error}"/></p>
-	</c:if>
+				<h3 class="card-title mb-4">Quên mật khẩu</h3>
 
-	<form action="<c:url value='/forgot-password'/>" method="post">
-		<label>Email</label><br>
-		<input type="email" name="email" required autocomplete="email"><br><br>
-		<button type="submit">Gửi mã OTP</button>
-	</form>
+				<c:if test="${not empty error}">
+					<div class="alert alert-danger py-2"><c:out value="${error}"/></div>
+				</c:if>
 
-	<p><a href="<c:url value='/login'/>">Quay lại đăng nhập</a></p>
+				<form action="<c:url value='/forgot-password'/>" method="post" novalidate>
+					<div class="mb-4">
+						<label class="form-label">Email</label>
+						<input type="email" name="email" maxlength="150" required autocomplete="email"
+							class="form-control ${not empty errors.email ? 'is-invalid' : ''}"
+							value="<c:out value='${form.email}'/>">
+						<c:if test="${not empty errors.email}">
+							<div class="invalid-feedback d-block"><c:out value="${errors.email}"/></div>
+						</c:if>
+					</div>
+
+					<button type="submit" class="btn btn-primary w-100">
+						<i class="bi bi-send me-1"></i>Gửi mã OTP
+					</button>
+				</form>
+
+				<hr class="my-4">
+				<p class="text-center mb-0 small">
+					<a href="<c:url value='/login'/>">Quay lại đăng nhập</a>
+				</p>
+
+			</div>
+		</div>
+	</div>
+</div>
 
 </body>
 </html>

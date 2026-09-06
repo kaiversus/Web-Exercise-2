@@ -1,12 +1,15 @@
 package com.kai.controller.web;
 
 import java.io.IOException;
+import java.util.Map;
 
 import com.kai.entity.User;
+import com.kai.form.OtpForm;
 import com.kai.service.IUserService;
 import com.kai.service.OtpResult;
 import com.kai.service.impl.UserServiceImpl;
 import com.kai.util.Constant;
+import com.kai.util.ValidationUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -46,6 +49,7 @@ public class VerifyController extends HttpServlet {
 			}
 		}
 
+		req.setAttribute("form", new OtpForm());
 		req.setAttribute("username", username);
 		req.getRequestDispatcher(Constant.DIR_VERIFY).include(req, resp);
 	}
@@ -63,7 +67,15 @@ public class VerifyController extends HttpServlet {
 			return;
 		}
 
-		String otp = req.getParameter("otp") == null ? "" : req.getParameter("otp").trim();
+		OtpForm form = new OtpForm();
+		form.setOtp(req.getParameter("otp") == null ? "" : req.getParameter("otp").trim());
+
+		Map<String, String> errors = ValidationUtil.validate(form);
+		if (!errors.isEmpty()) {
+			render(req, resp, form, errors, null, username);
+			return;
+		}
+
 		User user = userService.findByUsername(username);
 
 		if (user != null && user.getStatus() == Constant.STATUS_ACTIVE) {
@@ -72,7 +84,7 @@ public class VerifyController extends HttpServlet {
 			return;
 		}
 
-		OtpResult result = userService.checkOtp(user, otp, "ACTIVATE");
+		OtpResult result = userService.checkOtp(user, form.getOtp(), "ACTIVATE");
 		String error;
 
 		switch (result) {
@@ -90,8 +102,19 @@ public class VerifyController extends HttpServlet {
 			default -> error = "Có lỗi xảy ra.";
 		}
 
-		req.setAttribute("error", error);
+		render(req, resp, form, errors, error, username);
+	}
+
+	private void render(HttpServletRequest req, HttpServletResponse resp, OtpForm form,
+			Map<String, String> errors, String globalError, String username)
+			throws ServletException, IOException {
+
+		req.setAttribute("form", form);
+		req.setAttribute("errors", errors);
 		req.setAttribute("username", username);
+		if (globalError != null) {
+			req.setAttribute("error", globalError);
+		}
 		req.getRequestDispatcher(Constant.DIR_VERIFY).include(req, resp);
 	}
 

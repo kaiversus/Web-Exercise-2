@@ -8,33 +8,62 @@
 </head>
 <body>
 
-	<h2>Đặt lại mật khẩu</h2>
-	<p>Nếu email vừa nhập tồn tại trong hệ thống, một mã OTP gồm 6 chữ số đã được gửi tới
-		hộp thư đó. Mã có hiệu lực trong 5 phút.</p>
+<div class="row justify-content-center">
+	<div class="col-lg-5 col-md-7">
+		<div class="card shadow-sm border-0">
+			<div class="card-body p-4">
 
-	<c:if test="${not empty error}">
-		<p style="color:red"><c:out value="${error}"/></p>
-	</c:if>
+				<h3 class="card-title mb-4">Đặt lại mật khẩu</h3>
 
-	<form action="<c:url value='/reset-password'/>" method="post">
+				<c:if test="${not empty error}">
+					<div class="alert alert-danger py-2"><c:out value="${error}"/></div>
+				</c:if>
 
-		<label>Mã OTP</label><br>
-		<input type="text" name="otp" inputmode="numeric" pattern="[0-9]{6}"
-			maxlength="6" required autocomplete="one-time-code"
-			style="font-size:22px;letter-spacing:6px;width:170px"><br>
+				<form action="<c:url value='/reset-password'/>" method="post" novalidate>
 
-		<label>Mật khẩu mới (tối thiểu 8 ký tự, có chữ và số)</label><br>
-		<input type="password" name="password" minlength="8" required
-			autocomplete="new-password"><br>
+					<div class="mb-3">
+						<label class="form-label">Mã OTP</label>
+						<input type="text" name="otp" inputmode="numeric" maxlength="6" required
+							autocomplete="one-time-code"
+							class="form-control text-center ${not empty errors.otp ? 'is-invalid' : ''}"
+							style="letter-spacing:.5rem; font-weight:600"
+							value="<c:out value='${form.otp}'/>">
+						<c:if test="${not empty errors.otp}">
+							<div class="invalid-feedback d-block"><c:out value="${errors.otp}"/></div>
+						</c:if>
+					</div>
 
-		<label>Xác nhận mật khẩu mới</label><br>
-		<input type="password" name="confirmPassword" minlength="8" required
-			autocomplete="new-password"><br><br>
+					<div class="mb-3">
+						<label class="form-label">Mật khẩu mới</label>
+						<input type="password" name="password" required autocomplete="new-password"
+							class="form-control ${not empty errors.password ? 'is-invalid' : ''}">
+						<c:if test="${not empty errors.password}">
+							<div class="invalid-feedback d-block"><c:out value="${errors.password}"/></div>
+						</c:if>
+						<div class="form-text">Tối thiểu 8 ký tự, phải có cả chữ và số.</div>
+					</div>
 
-		<button type="submit">Đổi mật khẩu</button>
-	</form>
+					<div class="mb-4">
+						<label class="form-label">Xác nhận mật khẩu mới</label>
+						<input type="password" name="confirmPassword" required autocomplete="new-password"
+							class="form-control ${not empty errors.confirmPassword ? 'is-invalid' : ''}">
+						<c:if test="${not empty errors.confirmPassword}">
+							<div class="invalid-feedback d-block"><c:out value="${errors.confirmPassword}"/></div>
+						</c:if>
+					</div>
 
-	<p><a href="<c:url value='/forgot-password'/>">Gửi lại mã</a></p>
+					<button type="submit" class="btn btn-primary w-100">Đổi mật khẩu</button>
+				</form>
+
+				<hr class="my-4">
+				<p class="text-center mb-0 small">
+					<a href="<c:url value='/forgot-password'/>">Gửi lại mã</a>
+				</p>
+
+			</div>
+		</div>
+	</div>
+</div>
 
 </body>
 </html>

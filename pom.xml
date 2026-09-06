@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   
   <groupId>com.kai.001</groupId>
-  <artifactId>MyServiceMVC</artifactId>
+  <artifactId>52HZ-platform</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <packaging>war</packaging>
   
@@ -91,6 +91,7 @@
   </dependencies>
 
     <build>
+    <finalName>52HZ-platform</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

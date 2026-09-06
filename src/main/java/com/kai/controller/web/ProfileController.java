@@ -1,12 +1,16 @@
 package com.kai.controller.web;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.kai.entity.User;
+import com.kai.form.ProfileForm;
 import com.kai.service.IUserService;
 import com.kai.service.impl.UserServiceImpl;
 import com.kai.util.Constant;
 import com.kai.util.UploadUtil;
+import com.kai.util.ValidationUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -35,6 +39,11 @@ public class ProfileController extends HttpServlet {
 		User sessionUser = currentUser(req);
 		User user = userService.findById(sessionUser.getId());
 
+		ProfileForm form = new ProfileForm();
+		form.setFullname(user.getFullname());
+		form.setPhone(user.getPhone());
+
+		req.setAttribute("form", form);
 		req.setAttribute("user", user);
 		req.getRequestDispatcher("/views/profile.jsp").include(req, resp);
 	}
@@ -49,25 +58,33 @@ public class ProfileController extends HttpServlet {
 		User sessionUser = currentUser(req);
 		User user = userService.findById(sessionUser.getId());
 
-		String fullname = req.getParameter("fullname");
-		String phone = req.getParameter("phone");
+		ProfileForm form = new ProfileForm();
+		form.setFullname(trim(req.getParameter("fullname")));
+		form.setPhone(trim(req.getParameter("phone")));
 
-		if (fullname != null && fullname.trim().length() <= 150) {
-			user.setFullname(fullname.trim());
-		}
-		if (phone != null && (phone.isBlank() || phone.trim().matches("^0[0-9]{9}$"))) {
-			user.setPhone(phone.trim());
-		}
+		Map<String, String> errors = ValidationUtil.validate(form);
 
+		String savedImage = null;
 		try {
 			Part part = req.getPart("images");
-			String saved = UploadUtil.saveImage(part);
-			if (saved != null) {
-				UploadUtil.deleteQuietly(user.getImages());
-				user.setImages(saved);
-			}
+			savedImage = UploadUtil.saveImage(part);
 		} catch (Exception e) {
-			req.setAttribute("error", "Không lưu được ảnh: " + e.getMessage());
+			errors.put("images", e.getMessage());
+		}
+
+		if (!errors.isEmpty()) {
+			req.setAttribute("form", form);
+			req.setAttribute("errors", errors);
+			req.setAttribute("user", user);
+			req.getRequestDispatcher("/views/profile.jsp").include(req, resp);
+			return;
+		}
+
+		user.setFullname(form.getFullname());
+		user.setPhone(form.getPhone());
+		if (savedImage != null) {
+			UploadUtil.deleteQuietly(user.getImages());
+			user.setImages(savedImage);
 		}
 
 		userService.update(user);
@@ -78,7 +95,9 @@ public class ProfileController extends HttpServlet {
 		sessionUser.setImages(user.getImages());
 		session.setAttribute(Constant.SESSION_ACCOUNT, sessionUser);
 
-		req.setAttribute("message", "Cập nhật Profile thành công!");
+		req.setAttribute("form", form);
+		req.setAttribute("errors", new LinkedHashMap<String, String>());
+		req.setAttribute("message", "Cập nhật hồ sơ thành công!");
 		req.setAttribute("user", user);
 		req.getRequestDispatcher("/views/profile.jsp").include(req, resp);
 	}
@@ -86,5 +105,9 @@ public class ProfileController extends HttpServlet {
 	private User currentUser(HttpServletRequest req) {
 		HttpSession session = req.getSession(false);
 		return (User) session.getAttribute(Constant.SESSION_ACCOUNT);
+	}
+
+	private String trim(String s) {
+		return s == null ? "" : s.trim();
 	}
 }

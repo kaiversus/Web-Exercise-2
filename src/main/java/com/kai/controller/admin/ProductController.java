@@ -4,15 +4,18 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import com.kai.entity.Category;
 import com.kai.entity.Product;
+import com.kai.form.ProductForm;
 import com.kai.service.ICategoryService;
 import com.kai.service.IProductService;
 import com.kai.service.impl.CategoryServiceImpl;
 import com.kai.service.impl.ProductServiceImpl;
 import com.kai.util.CsrfUtil;
 import com.kai.util.UploadUtil;
+import com.kai.util.ValidationUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -33,8 +36,6 @@ public class ProductController extends HttpServlet {
 	private final IProductService productService = new ProductServiceImpl();
 	private final ICategoryService categoryService = new CategoryServiceImpl();
 
-	private static final BigDecimal MAX_PRICE = new BigDecimal("999999999999");
-
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
@@ -46,6 +47,7 @@ public class ProductController extends HttpServlet {
 		req.setAttribute("csrfToken", CsrfUtil.getToken(req.getSession()));
 
 		if (path.equals("/admin/product/add")) {
+			req.setAttribute("form", new ProductForm());
 			req.setAttribute("listcate", categoryService.findAll());
 			req.getRequestDispatcher("/views/admin/product-add.jsp").include(req, resp);
 			return;
@@ -58,6 +60,7 @@ public class ProductController extends HttpServlet {
 				resp.sendRedirect(req.getContextPath() + "/admin/products");
 				return;
 			}
+			req.setAttribute("form", toForm(product));
 			req.setAttribute("product", product);
 			req.setAttribute("listcate", categoryService.findAll());
 			req.getRequestDispatcher("/views/admin/product-edit.jsp").include(req, resp);
@@ -93,17 +96,28 @@ public class ProductController extends HttpServlet {
 	private void insertProduct(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
 
-		Product product = new Product();
-		String error = bind(req, product);
+		ProductForm form = bindForm(req);
+		Map<String, String> errors = ValidationUtil.validate(form);
 
-		if (error != null) {
-			req.setAttribute("error", error);
-			req.setAttribute("listcate", categoryService.findAll());
-			req.setAttribute("csrfToken", CsrfUtil.getToken(req.getSession()));
-			req.getRequestDispatcher("/views/admin/product-add.jsp").include(req, resp);
+		Category category = categoryService.findById(form.getCategoryid());
+		if (category == null) {
+			errors.put("categoryid", "Danh mục không tồn tại");
+		}
+
+		String savedImage = null;
+		try {
+			savedImage = saveImageIfAny(req);
+		} catch (Exception e) {
+			errors.put("imageFile", e.getMessage());
+		}
+
+		if (!errors.isEmpty()) {
+			render(req, resp, form, errors, "/views/admin/product-add.jsp", null);
 			return;
 		}
 
+		Product product = new Product();
+		apply(product, form, category, savedImage);
 		product.setCreatedDate(LocalDateTime.now());
 		productService.insert(product);
 		resp.sendRedirect(req.getContextPath() + "/admin/products");
@@ -112,28 +126,37 @@ public class ProductController extends HttpServlet {
 	private void updateProduct(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
 
-		int id = parseInt(req.getParameter("productid"), 0);
-		Product product = productService.findById(id);
+		ProductForm form = bindForm(req);
+		Product product = productService.findById(form.getProductid());
 		if (product == null) {
 			resp.sendRedirect(req.getContextPath() + "/admin/products");
 			return;
 		}
 
-		String oldImage = product.getImages();
-		String error = bind(req, product);
+		Map<String, String> errors = ValidationUtil.validate(form);
 
-		if (error != null) {
-			req.setAttribute("error", error);
-			req.setAttribute("product", product);
-			req.setAttribute("listcate", categoryService.findAll());
-			req.setAttribute("csrfToken", CsrfUtil.getToken(req.getSession()));
-			req.getRequestDispatcher("/views/admin/product-edit.jsp").include(req, resp);
+		Category category = categoryService.findById(form.getCategoryid());
+		if (category == null) {
+			errors.put("categoryid", "Danh mục không tồn tại");
+		}
+
+		String savedImage = null;
+		try {
+			savedImage = saveImageIfAny(req);
+		} catch (Exception e) {
+			errors.put("imageFile", e.getMessage());
+		}
+
+		if (!errors.isEmpty()) {
+			render(req, resp, form, errors, "/views/admin/product-edit.jsp", product);
 			return;
 		}
 
+		String oldImage = product.getImages();
+		apply(product, form, category, savedImage);
 		productService.update(product);
 
-		if (oldImage != null && !oldImage.equals(product.getImages())) {
+		if (savedImage != null && oldImage != null && !oldImage.equals(savedImage)) {
 			UploadUtil.deleteQuietly(oldImage);
 		}
 		resp.sendRedirect(req.getContextPath() + "/admin/products");
@@ -156,60 +179,64 @@ public class ProductController extends HttpServlet {
 		resp.sendRedirect(req.getContextPath() + "/admin/products");
 	}
 
-	private String bind(HttpServletRequest req, Product product)
+	private ProductForm bindForm(HttpServletRequest req) {
+		ProductForm form = new ProductForm();
+		form.setProductid(parseInt(req.getParameter("productid"), 0));
+		form.setProductname(trim(req.getParameter("productname")));
+		form.setDescription(trim(req.getParameter("description")));
+		form.setQuantity(parseInt(req.getParameter("quantity"), -1));
+		form.setCategoryid(parseInt(req.getParameter("categoryid"), 0));
+		form.setStatus("1".equals(req.getParameter("status")) ? 1 : 0);
+		form.setPrice(parseDecimal(req.getParameter("price")));
+		return form;
+	}
+
+	private ProductForm toForm(Product product) {
+		ProductForm form = new ProductForm();
+		form.setProductid(product.getProductid());
+		form.setProductname(product.getProductname());
+		form.setDescription(product.getDescription());
+		form.setPrice(product.getPrice());
+		form.setQuantity(product.getQuantity());
+		form.setStatus(product.getStatus());
+		if (product.getCategory() != null) {
+			form.setCategoryid(product.getCategory().getCategoryid());
+		}
+		return form;
+	}
+
+	private void apply(Product product, ProductForm form, Category category, String savedImage) {
+		product.setProductname(form.getProductname());
+		product.setDescription(form.getDescription());
+		product.setPrice(form.getPrice().setScale(2, RoundingMode.HALF_UP));
+		product.setQuantity(form.getQuantity());
+		product.setStatus(form.getStatus());
+		product.setCategory(category);
+		if (savedImage != null) {
+			product.setImages(savedImage);
+		}
+	}
+
+	private String saveImageIfAny(HttpServletRequest req) throws Exception {
+		Part part = req.getPart("imageFile");
+		if (part == null || part.getSize() == 0) {
+			return null;
+		}
+		return UploadUtil.saveImage(part);
+	}
+
+	private void render(HttpServletRequest req, HttpServletResponse resp, ProductForm form,
+			Map<String, String> errors, String view, Product product)
 			throws ServletException, IOException {
 
-		String productname = trim(req.getParameter("productname"));
-		String description = trim(req.getParameter("description"));
-		String priceRaw = trim(req.getParameter("price"));
-		int quantity = parseInt(req.getParameter("quantity"), -1);
-		int status = "1".equals(req.getParameter("status")) ? 1 : 0;
-		int categoryid = parseInt(req.getParameter("categoryid"), 0);
-
-		if (productname.isEmpty() || productname.length() > 255) {
-			return "Tên sản phẩm bắt buộc, tối đa 255 ký tự.";
+		req.setAttribute("form", form);
+		req.setAttribute("errors", errors);
+		req.setAttribute("listcate", categoryService.findAll());
+		req.setAttribute("csrfToken", CsrfUtil.getToken(req.getSession()));
+		if (product != null) {
+			req.setAttribute("product", product);
 		}
-		if (description.length() > 5000) {
-			return "Mô tả tối đa 5000 ký tự.";
-		}
-
-		BigDecimal price;
-		try {
-			price = new BigDecimal(priceRaw);
-		} catch (Exception e) {
-			return "Giá không hợp lệ.";
-		}
-		if (price.signum() < 0 || price.compareTo(MAX_PRICE) > 0) {
-			return "Giá phải từ 0 trở lên và nhỏ hơn 999.999.999.999.";
-		}
-		if (quantity < 0 || quantity > 1000000) {
-			return "Số lượng phải từ 0 đến 1.000.000.";
-		}
-
-		Category category = categoryService.findById(categoryid);
-		if (category == null) {
-			return "Danh mục không tồn tại.";
-		}
-
-		Part part = req.getPart("imageFile");
-		if (part != null && part.getSize() > 0) {
-			try {
-				String saved = UploadUtil.saveImage(part);
-				if (saved != null) {
-					product.setImages(saved);
-				}
-			} catch (IOException e) {
-				return e.getMessage();
-			}
-		}
-
-		product.setProductname(productname);
-		product.setDescription(description);
-		product.setPrice(price.setScale(2, RoundingMode.HALF_UP));
-		product.setQuantity(quantity);
-		product.setStatus(status);
-		product.setCategory(category);
-		return null;
+		req.getRequestDispatcher(view).include(req, resp);
 	}
 
 	private String trim(String s) {
@@ -221,6 +248,14 @@ public class ProductController extends HttpServlet {
 			return Integer.parseInt(s.trim());
 		} catch (Exception e) {
 			return defaultValue;
+		}
+	}
+
+	private BigDecimal parseDecimal(String s) {
+		try {
+			return new BigDecimal(s.trim());
+		} catch (Exception e) {
+			return null;
 		}
 	}
 }

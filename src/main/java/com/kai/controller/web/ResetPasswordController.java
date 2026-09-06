@@ -1,9 +1,10 @@
 package com.kai.controller.web;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import com.kai.entity.User;
+import com.kai.form.ResetPasswordForm;
 import com.kai.service.IUserService;
 import com.kai.service.OtpResult;
 import com.kai.service.impl.UserServiceImpl;
@@ -11,6 +12,7 @@ import com.kai.util.Constant;
 import com.kai.util.EmailUtil;
 import com.kai.util.PasswordUtil;
 import com.kai.util.RateLimiter;
+import com.kai.util.ValidationUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -35,6 +37,7 @@ public class ResetPasswordController extends HttpServlet {
 			resp.sendRedirect(req.getContextPath() + "/forgot-password");
 			return;
 		}
+		req.setAttribute("form", new ResetPasswordForm());
 		req.getRequestDispatcher(Constant.DIR_RESET).include(req, resp);
 	}
 
@@ -51,41 +54,43 @@ public class ResetPasswordController extends HttpServlet {
 			return;
 		}
 
+		ResetPasswordForm form = new ResetPasswordForm();
 		String otp = req.getParameter("otp");
-		String password = req.getParameter("password");
-		String confirm = req.getParameter("confirmPassword");
-		otp = (otp == null) ? "" : otp.trim();
+		form.setOtp(otp == null ? "" : otp.trim());
+		form.setPassword(req.getParameter("password"));
+		form.setConfirmPassword(req.getParameter("confirmPassword"));
 
-		String error = validatePassword(password, confirm);
-		if (error != null) {
-			req.setAttribute("error", error);
-			req.getRequestDispatcher(Constant.DIR_RESET).include(req, resp);
+		Map<String, String> errors = ValidationUtil.validate(form);
+		if (!errors.containsKey("confirmPassword") && !form.passwordMatches()) {
+			errors.put("confirmPassword", "Xác nhận mật khẩu không khớp");
+		}
+		if (!errors.isEmpty()) {
+			render(req, resp, form, errors, null);
 			return;
 		}
 
 		String key = "reset:mail:" + email;
 		if (!RateLimiter.allow(key, 10, 900)) {
-			req.setAttribute("error",
+			render(req, resp, form, errors,
 					"Bạn đã thử quá nhiều lần. Hãy yêu cầu mã mới sau 15 phút.");
-			req.getRequestDispatcher(Constant.DIR_RESET).include(req, resp);
 			return;
 		}
 
 		User user = userService.findByEmail(email);
-		OtpResult result = userService.checkOtp(user, otp, "RESET");
+		OtpResult result = userService.checkOtp(user, form.getOtp(), "RESET");
 
 		if (result != OtpResult.OK) {
+			String error;
 			switch (result) {
 				case EXPIRED -> error = "Mã OTP đã hết hạn. Hãy yêu cầu mã mới.";
 				case LOCKED -> error = "Bạn đã nhập sai quá nhiều lần. Hãy yêu cầu mã mới.";
 				default -> error = "Mã OTP không đúng.";
 			}
-			req.setAttribute("error", error);
-			req.getRequestDispatcher(Constant.DIR_RESET).include(req, resp);
+			render(req, resp, form, errors, error);
 			return;
 		}
 
-		user.setPassword(PasswordUtil.hash(password));
+		user.setPassword(PasswordUtil.hash(form.getPassword()));
 		userService.update(user);
 
 		try {
@@ -105,6 +110,20 @@ public class ResetPasswordController extends HttpServlet {
 		resp.sendRedirect(req.getContextPath() + "/login?reset=1");
 	}
 
+	private void render(HttpServletRequest req, HttpServletResponse resp,
+			ResetPasswordForm form, Map<String, String> errors, String globalError)
+			throws ServletException, IOException {
+
+		form.setPassword(null);
+		form.setConfirmPassword(null);
+		req.setAttribute("form", form);
+		req.setAttribute("errors", errors);
+		if (globalError != null) {
+			req.setAttribute("error", globalError);
+		}
+		req.getRequestDispatcher(Constant.DIR_RESET).include(req, resp);
+	}
+
 	private String resetEmail(HttpServletRequest req) {
 		HttpSession session = req.getSession(false);
 		if (session == null) {
@@ -112,21 +131,5 @@ public class ResetPasswordController extends HttpServlet {
 		}
 		Object v = session.getAttribute("resetEmail");
 		return (v == null) ? null : v.toString();
-	}
-
-	private String validatePassword(String password, String confirm) {
-		if (password == null || password.length() < 8) {
-			return "Mật khẩu tối thiểu 8 ký tự.";
-		}
-		if (password.getBytes(StandardCharsets.UTF_8).length > PasswordUtil.MAX_PASSWORD_BYTES) {
-			return "Mật khẩu quá dài (tối đa 72 byte).";
-		}
-		if (!password.matches(".*[A-Za-z].*") || !password.matches(".*[0-9].*")) {
-			return "Mật khẩu phải có cả chữ và số.";
-		}
-		if (!password.equals(confirm)) {
-			return "Xác nhận mật khẩu không khớp.";
-		}
-		return null;
 	}
 }

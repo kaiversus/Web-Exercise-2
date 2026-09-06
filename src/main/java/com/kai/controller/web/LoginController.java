@@ -1,14 +1,17 @@
 package com.kai.controller.web;
 
 import java.io.IOException;
+import java.util.Map;
 
 import com.kai.entity.User;
+import com.kai.form.LoginForm;
 import com.kai.service.IUserService;
 import com.kai.service.impl.UserServiceImpl;
 import com.kai.util.Constant;
 import com.kai.util.CsrfUtil;
 import com.kai.util.PasswordUtil;
 import com.kai.util.RateLimiter;
+import com.kai.util.ValidationUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -39,11 +42,13 @@ public class LoginController extends HttpServlet {
 			return;
 		}
 
+		LoginForm form = new LoginForm();
+
 		Cookie[] cookies = req.getCookies();
 		if (cookies != null) {
 			for (Cookie c : cookies) {
 				if (Constant.COOKIE_REMEMBER.equals(c.getName())) {
-					req.setAttribute("rememberedUsername", c.getValue());
+					form.setAccount(c.getValue());
 				}
 			}
 		}
@@ -55,6 +60,7 @@ public class LoginController extends HttpServlet {
 			req.setAttribute("message", "Đổi mật khẩu thành công. Mời bạn đăng nhập.");
 		}
 
+		req.setAttribute("form", form);
 		req.setAttribute("redirect", safePath(req.getParameter("redirect")));
 		req.getRequestDispatcher(Constant.DIR_LOGIN).include(req, resp);
 	}
@@ -66,30 +72,28 @@ public class LoginController extends HttpServlet {
 		req.setCharacterEncoding("UTF-8");
 		resp.setContentType("text/html;charset=UTF-8");
 
-		String account = req.getParameter("account");
-		String password = req.getParameter("password");
+		LoginForm form = new LoginForm();
+		form.setAccount(trim(req.getParameter("account")));
+		form.setPassword(req.getParameter("password"));
+
 		boolean remember = "on".equals(req.getParameter("remember"));
 		String redirect = safePath(req.getParameter("redirect"));
 
-		if (account == null) {
-			account = "";
+		Map<String, String> errors = ValidationUtil.validate(form);
+		if (!errors.isEmpty()) {
+			render(req, resp, form, errors, null, redirect);
+			return;
 		}
-		if (password == null) {
-			password = "";
-		}
-		account = account.trim();
 
+		String account = form.getAccount();
 		String ipKey = "login:ip:" + clientIp(req);
 		String accKey = "login:acc:" + account.toLowerCase();
 
 		if (!RateLimiter.allow(ipKey, 20, 300) || !RateLimiter.allow(accKey, 5, 300)) {
 			long wait = Math.max(RateLimiter.retryAfterSeconds(ipKey, 300),
 					RateLimiter.retryAfterSeconds(accKey, 300));
-			req.setAttribute("error",
-					"Bạn đã thử quá nhiều lần. Vui lòng đợi " + wait + " giây.");
-			req.setAttribute("account", account);
-			req.setAttribute("redirect", redirect);
-			req.getRequestDispatcher(Constant.DIR_LOGIN).include(req, resp);
+			render(req, resp, form, errors,
+					"Bạn đã thử quá nhiều lần. Vui lòng đợi " + wait + " giây.", redirect);
 			return;
 		}
 
@@ -99,13 +103,11 @@ public class LoginController extends HttpServlet {
 		}
 
 		String storedHash = (user == null) ? DUMMY_HASH : user.getPassword();
-		boolean passwordOk = PasswordUtil.verify(password, storedHash);
+		boolean passwordOk = PasswordUtil.verify(form.getPassword(), storedHash);
 
 		if (user == null || !passwordOk) {
-			req.setAttribute("error", "Tên đăng nhập hoặc mật khẩu không đúng.");
-			req.setAttribute("account", account);
-			req.setAttribute("redirect", redirect);
-			req.getRequestDispatcher(Constant.DIR_LOGIN).include(req, resp);
+			render(req, resp, form, errors,
+					"Tên đăng nhập hoặc mật khẩu không đúng.", redirect);
 			return;
 		}
 
@@ -149,8 +151,26 @@ public class LoginController extends HttpServlet {
 				: req.getContextPath() + redirect);
 	}
 
+	private void render(HttpServletRequest req, HttpServletResponse resp, LoginForm form,
+			Map<String, String> errors, String globalError, String redirect)
+			throws ServletException, IOException {
+
+		form.setPassword(null);
+		req.setAttribute("form", form);
+		req.setAttribute("errors", errors);
+		req.setAttribute("redirect", redirect);
+		if (globalError != null) {
+			req.setAttribute("error", globalError);
+		}
+		req.getRequestDispatcher(Constant.DIR_LOGIN).include(req, resp);
+	}
+
 	public static String clientIp(HttpServletRequest req) {
 		return req.getRemoteAddr();
+	}
+
+	private String trim(String s) {
+		return s == null ? "" : s.trim();
 	}
 
 	private String safePath(String target) {
